@@ -1,8 +1,10 @@
 package com.academy.project.serviceImplementation.auth;
 
 import com.academy.project.dto.auth.AuthResponse;
+import com.academy.project.dto.auth.ForgotPasswordRequest;
 import com.academy.project.dto.auth.LoginRequest;
 import com.academy.project.dto.auth.RefreshTokenRequest;
+import com.academy.project.dto.auth.ResetPasswordRequest;
 import com.academy.project.dto.register.RegisterRequest;
 import com.academy.project.dto.response.UserResponse;
 import com.academy.project.entity.user.User;
@@ -13,7 +15,9 @@ import com.academy.project.exception.ApiException;
 import com.academy.project.repository.user.UserRepository;
 import com.academy.project.repository.user.UserSessionRepository;
 import com.academy.project.security.JwtTokenProvider;
+import com.academy.project.security.SecurityUtils;
 import com.academy.project.service.auth.AuthService;
+import com.academy.project.util.PhoneUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -41,20 +45,18 @@ public class AuthServiceImplementation implements AuthService {
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (request.getEmail() == null && request.getPhone() == null) {
-            throw ApiException.badRequest("Either email or phone is required");
+        if ( request.getPhone() == null) {
+            throw ApiException.badRequest(" Phone Number is required");
         }
-        if (request.getEmail() != null && userRepository.existsByEmailIgnoreCase(request.getEmail())) {
-            throw ApiException.conflict("An account with this email already exists");
-        }
-        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+        if (userRepository.existsByPhoneNormalized(request.getPhone())) {
             throw ApiException.conflict("An account with this phone number already exists");
         }
 
+        String normalizedPhone = request.getPhone() != null ? PhoneUtils.normalize(request.getPhone()) : null;
+
         User user = User.builder()
                 .name(request.getName())
-                .email(request.getEmail())
-                .phone(request.getPhone())
+                .phone(normalizedPhone)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(resolveRole(request.getRole()))
                 .status(UserStatus.ACTIVE)
@@ -87,6 +89,23 @@ public class AuthServiceImplementation implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public void forgotPassword(ForgotPasswordRequest request) {
+        User currentUser = requireCurrentActiveUser();
+        verifyPhoneMatchesCurrentUser(currentUser, request.getPhone());
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        User currentUser = requireCurrentActiveUser();
+        verifyPhoneMatchesCurrentUser(currentUser, request.getPhone());
+
+        currentUser.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(currentUser);
+    }
+
+    @Override
     @Transactional
     public AuthResponse refresh(RefreshTokenRequest request) {
         String hashed = hashToken(request.getRefreshToken());
@@ -102,7 +121,6 @@ public class AuthServiceImplementation implements AuthService {
                 .filter(User::isActive)
                 .orElseThrow(() -> ApiException.unauthorized("Account no longer active"));
 
-        // Rotate: revoke the used refresh token and issue a brand new pair.
         session.setRevokedAt(LocalDateTime.now());
         userSessionRepository.save(session);
 
@@ -118,8 +136,6 @@ public class AuthServiceImplementation implements AuthService {
             userSessionRepository.save(session);
         });
     }
-
-    // ---------- helpers ----------
 
     private AuthResponse issueTokens(User user, String deviceInfo, String ipAddress) {
         String accessToken = jwtTokenProvider.generateAccessToken(user);
@@ -143,15 +159,35 @@ public class AuthServiceImplementation implements AuthService {
                 .build();
     }
 
-    /**
-     * Refresh tokens are stored hashed (never in plaintext) so a DB read/leak can't be replayed
-     * as a live session - same principle as password_hash on the users table.
-     *
-     * BCrypt is deliberately NOT used here: it salts randomly per call, which would make
-     * "look this token up by its hash" (a unique-index equality lookup) impossible. The raw
-     * token already has 512 bits of entropy from SecureRandom, so a fast deterministic digest
-     * (SHA-256) is the correct and standard choice for opaque refresh/session tokens.
-     */
+    private User requireCurrentActiveUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Long userId = SecurityUtils.resolveUserId(auth);
+
+        if (userId == null) {
+            throw ApiException.unauthorized("Login required to change password");
+        }
+
+        return userRepository.findById(userId)
+                .filter(User::isActive)
+                .orElseThrow(() -> ApiException.unauthorized("Account no longer active"));
+    }
+
+    private void verifyPhoneMatchesCurrentUser(User currentUser, String inputPhone) {
+        if (currentUser.getPhone() == null || currentUser.getPhone().isBlank()) {
+            throw ApiException.badRequest("No mobile number is registered for your account");
+        }
+        if (!phonesMatch(currentUser.getPhone(), inputPhone)) {
+            throw ApiException.badRequest("Mobile number does not match your account");
+        }
+    }
+
+    private boolean phonesMatch(String registeredPhone, String inputPhone) {
+        if (registeredPhone == null || registeredPhone.isBlank()) {
+            return false;
+        }
+        return PhoneUtils.normalize(registeredPhone).equals(PhoneUtils.normalize(inputPhone));
+    }
+
     private String hashToken(String rawToken) {
         try {
             java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
@@ -161,6 +197,7 @@ public class AuthServiceImplementation implements AuthService {
             throw new IllegalStateException("SHA-256 not available", e);
         }
     }
+
     private UserRole resolveRole(UserRole requestedRole) {
         if (requestedRole != null && isCurrentUserAdmin()) {
             return requestedRole;

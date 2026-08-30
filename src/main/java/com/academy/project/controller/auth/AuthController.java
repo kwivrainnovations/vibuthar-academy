@@ -1,8 +1,10 @@
 package com.academy.project.controller.auth;
 
 import com.academy.project.dto.auth.AuthResponse;
+import com.academy.project.dto.auth.ForgotPasswordRequest;
 import com.academy.project.dto.auth.LoginRequest;
 import com.academy.project.dto.auth.RefreshTokenRequest;
+import com.academy.project.dto.auth.ResetPasswordRequest;
 import com.academy.project.dto.register.RegisterRequest;
 import com.academy.project.dto.response.ApiResponse;
 import com.academy.project.service.auth.AuthService;
@@ -11,11 +13,14 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@CrossOrigin
+
 public class AuthController {
 
     private final AuthService authService;
@@ -44,6 +49,20 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request);
         return ResponseEntity.ok(ApiResponse.ok("Logged out", null));
+    }
+
+    @PostMapping("/forgot-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok("Mobile number verified for your account. You can set a new password.", null));
+    }
+
+    @PostMapping("/reset-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.ok("Password reset successfully", null));
     }
 
     private String extractIp(HttpServletRequest request) {

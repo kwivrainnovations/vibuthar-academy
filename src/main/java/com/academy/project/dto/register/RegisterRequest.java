@@ -21,9 +21,6 @@ public class RegisterRequest {
     @Size(max = 150)
     private String name;
 
-    @Email(message = "Must be a valid email address")
-    private String email;
-
     @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "Must be a valid phone number")
     private String phone;
 

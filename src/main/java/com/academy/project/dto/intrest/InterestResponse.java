@@ -14,6 +14,8 @@ public class InterestResponse {
     private String username;
     private String emailId;
     private String courseOfInterest;
+    private String mobileNumber;
+    private String description;
     private EmailStatus emailStatus;
     private LocalDateTime createdAt;
 }

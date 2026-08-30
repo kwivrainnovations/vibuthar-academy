@@ -77,7 +77,18 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/logout"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password"
+                        ).authenticated()
+                        .requestMatchers("/api/courses").permitAll()
+                        .requestMatchers("/api/v1/interests").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
                         // Role-gated examples (Phase 1 demo endpoints; real feature endpoints

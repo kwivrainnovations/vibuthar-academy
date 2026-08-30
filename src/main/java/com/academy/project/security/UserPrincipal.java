@@ -34,6 +34,10 @@ public class UserPrincipal implements UserDetails {
         return id;
     }
 
+    public String getPhone() {
+        return phone;
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;

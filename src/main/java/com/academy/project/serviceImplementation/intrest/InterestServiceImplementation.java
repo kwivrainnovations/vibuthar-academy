@@ -2,6 +2,7 @@ package com.academy.project.serviceImplementation.intrest;
 
 import com.academy.project.dto.intrest.InterestRequest;
 import com.academy.project.dto.intrest.InterestResponse;
+import com.academy.project.dto.response.PagedResponse;
 import com.academy.project.entity.intrest.Interest;
 import com.academy.project.enums.EmailStatus;
 import com.academy.project.repository.interest.InterestRepository;
@@ -9,7 +10,11 @@ import com.academy.project.service.intrest.InterestService;
 import com.academy.project.service.emailService.IntrestEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -71,5 +76,47 @@ public class InterestServiceImplementation implements InterestService {
                 .emailStatus(updatedInterest.getEmailStatus())
                 .createdAt(updatedInterest.getCreatedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<InterestResponse> listInterests(
+            String search,
+            String courseOfInterest,
+            EmailStatus emailStatus,
+            int page,
+            int size
+    ) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Interest> interestPage = interestRepository.searchInterests(
+                normalize(search),
+                normalize(courseOfInterest),
+                emailStatus,
+                pageRequest
+        );
+
+        Page<InterestResponse> mapped = interestPage.map(this::toResponse);
+        return PagedResponse.from(mapped);
+    }
+
+    private InterestResponse toResponse(Interest interest) {
+        return InterestResponse.builder()
+                .id(interest.getId())
+                .username(interest.getUsername())
+                .emailId(interest.getEmailId())
+                .courseOfInterest(interest.getCourseOfInterest())
+                .emailStatus(interest.getEmailStatus())
+                .createdAt(interest.getCreatedAt())
+                .mobileNumber(interest.getMobileNumber())
+                .description(interest.getDescription())
+                .build();
+    }
+
+    private String normalize(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }
