@@ -12,6 +12,7 @@ import java.util.List;
 public class MemberResponse {
 
     private Long id;
+    private String userId;
     private String name;
     private String email;
     private String phone;
@@ -20,6 +21,7 @@ public class MemberResponse {
     public static MemberResponse fromUser(User user, List<String> subscribedCourses) {
         return MemberResponse.builder()
                 .id(user.getId())
+                .userId(user.getUserId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
@@ -30,6 +32,7 @@ public class MemberResponse {
     public static MemberResponse fromUserResponse(UserResponse user) {
         return MemberResponse.builder()
                 .id(user.getId())
+                .userId(user.getUserId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())

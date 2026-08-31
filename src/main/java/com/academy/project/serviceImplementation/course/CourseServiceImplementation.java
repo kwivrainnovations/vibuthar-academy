@@ -12,6 +12,7 @@ import com.academy.project.exception.ApiException;
 import com.academy.project.repository.course.CourseRepository;
 import com.academy.project.repository.course.CourseVideoRepository;
 import com.academy.project.service.course.CourseService;
+import com.academy.project.util.CourseIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -38,7 +39,11 @@ public class CourseServiceImplementation implements CourseService {
                 .thumbnailUrl(request.getThumbnailUrl())
                 .build();
 
-        return CourseResponse.fromEntity(courseRepository.save(course));
+        course = courseRepository.save(course);
+        course.setCourseId(CourseIdGenerator.generate(course));
+        course = courseRepository.save(course);
+
+        return CourseResponse.fromEntity(course);
     }
 
     @Override

@@ -6,18 +6,25 @@ import com.academy.project.dto.auth.LoginRequest;
 import com.academy.project.dto.auth.RefreshTokenRequest;
 import com.academy.project.dto.auth.ResetPasswordRequest;
 import com.academy.project.dto.register.RegisterRequest;
+import com.academy.project.dto.response.SubscribedCourseResponse;
 import com.academy.project.dto.response.UserResponse;
+import com.academy.project.entity.course.Course;
+import com.academy.project.entity.subscription.CourseSubscription;
 import com.academy.project.entity.user.User;
 import com.academy.project.entity.user.UserRole;
 import com.academy.project.entity.user.UserSession;
 import com.academy.project.entity.user.UserStatus;
+import com.academy.project.enums.SubscriptionStatus;
 import com.academy.project.exception.ApiException;
+import com.academy.project.repository.course.CourseRepository;
+import com.academy.project.repository.subscription.CourseSubscriptionRepository;
 import com.academy.project.repository.user.UserRepository;
 import com.academy.project.repository.user.UserSessionRepository;
 import com.academy.project.security.JwtTokenProvider;
 import com.academy.project.security.SecurityUtils;
 import com.academy.project.service.auth.AuthService;
 import com.academy.project.util.PhoneUtils;
+import com.academy.project.util.UserIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -30,7 +37,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +50,8 @@ public class AuthServiceImplementation implements AuthService {
 
     private final UserRepository userRepository;
     private final UserSessionRepository userSessionRepository;
+    private final CourseSubscriptionRepository courseSubscriptionRepository;
+    private final CourseRepository courseRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
@@ -63,6 +77,7 @@ public class AuthServiceImplementation implements AuthService {
                 .build();
 
         user = userRepository.save(user);
+        user = assignPublicUserId(user);
 
         return issueTokens(user, null, null);
     }
@@ -117,7 +132,7 @@ public class AuthServiceImplementation implements AuthService {
             throw ApiException.unauthorized("Invalid or expired refresh token");
         }
 
-        User user = userRepository.findById(session.getUserId())
+        User user = userRepository.findByUserId(session.getUserId())
                 .filter(User::isActive)
                 .orElseThrow(() -> ApiException.unauthorized("Account no longer active"));
 
@@ -138,11 +153,13 @@ public class AuthServiceImplementation implements AuthService {
     }
 
     private AuthResponse issueTokens(User user, String deviceInfo, String ipAddress) {
+        user = assignPublicUserId(user);
+
         String accessToken = jwtTokenProvider.generateAccessToken(user);
         String rawRefreshToken = jwtTokenProvider.generateOpaqueRefreshToken();
 
         UserSession session = UserSession.builder()
-                .userId(user.getId())
+                .userId(user.getUserId())
                 .refreshTokenHash(hashToken(rawRefreshToken))
                 .deviceInfo(deviceInfo)
                 .ipAddress(ipAddress)
@@ -155,19 +172,57 @@ public class AuthServiceImplementation implements AuthService {
                 .refreshToken(rawRefreshToken)
                 .tokenType("Bearer")
                 .expiresIn(jwtTokenProvider.getAccessTokenExpirationSeconds())
-                .user(UserResponse.fromEntity(user))
+                .user(UserResponse.fromEntity(user, loadSubscribedCourses(user.getUserId())))
                 .build();
+    }
+
+    private User assignPublicUserId(User user) {
+        if (user.getUserId() != null && !user.getUserId().isBlank()) {
+            return user;
+        }
+        user.setUserId(UserIdGenerator.generate(user));
+        return userRepository.save(user);
+    }
+
+    private List<SubscribedCourseResponse> loadSubscribedCourses(String userId) {
+        LocalDateTime now = LocalDateTime.now();
+        List<CourseSubscription> subscriptions = courseSubscriptionRepository.findActiveSubscriptionsForUser(
+                userId, SubscriptionStatus.ACTIVE, now
+        );
+
+        if (subscriptions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<String> courseIds = subscriptions.stream()
+                .map(CourseSubscription::getCourseId)
+                .distinct()
+                .toList();
+
+        Map<String, Course> coursesById = courseRepository.findByCourseIdIn(courseIds).stream()
+                .collect(Collectors.toMap(Course::getCourseId, Function.identity()));
+
+        return subscriptions.stream()
+                .map(subscription -> {
+                    Course course = coursesById.get(subscription.getCourseId());
+                    if (course == null) {
+                        return null;
+                    }
+                    return SubscribedCourseResponse.from(course, subscription.getSubscribedAt());
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private User requireCurrentActiveUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = SecurityUtils.resolveUserId(auth);
+        String userId = SecurityUtils.resolveUserId(auth);
 
         if (userId == null) {
             throw ApiException.unauthorized("Login required to change password");
         }
 
-        return userRepository.findById(userId)
+        return userRepository.findByUserId(userId)
                 .filter(User::isActive)
                 .orElseThrow(() -> ApiException.unauthorized("Account no longer active"));
     }

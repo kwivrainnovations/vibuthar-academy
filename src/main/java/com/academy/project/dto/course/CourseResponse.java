@@ -15,6 +15,7 @@ import java.util.List;
 public class CourseResponse {
 
     private Long id;
+    private String courseId;
     private String title;
     private String description;
     private Integer durationHours;
@@ -28,6 +29,7 @@ public class CourseResponse {
     public static CourseResponse fromEntity(Course course) {
         return CourseResponse.builder()
                 .id(course.getId())
+                .courseId(course.getCourseId())
                 .title(course.getTitle())
                 .description(course.getDescription())
                 .durationHours(course.getDurationHours())
@@ -43,6 +45,7 @@ public class CourseResponse {
         CourseResponse response = fromEntity(course);
         return CourseResponse.builder()
                 .id(response.getId())
+                .courseId(response.getCourseId())
                 .title(response.getTitle())
                 .description(response.getDescription())
                 .durationHours(response.getDurationHours())

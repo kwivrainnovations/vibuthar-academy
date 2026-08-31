@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,9 +35,9 @@ public class MemberServiceImplementation implements MemberService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<MemberResponse> listSubscribedMembers(Long courseId, String search, int page, int size) {
+    public PagedResponse<MemberResponse> listSubscribedMembers(String courseId, String search, int page, int size) {
         LocalDateTime now = LocalDateTime.now();
-        List<Long> subscriberIds = subscriptionRepository.findActiveSubscriberUserIds(
+        List<String> subscriberIds = subscriptionRepository.findActiveSubscriberUserIds(
                 SubscriptionStatus.ACTIVE, now, courseId
         );
 
@@ -55,10 +56,10 @@ public class MemberServiceImplementation implements MemberService {
                 UserRole.STUDENT, subscriberIds, normalizeSearch(search), pageRequest
         );
 
-        Map<Long, List<String>> coursesByUser = buildSubscribedCourseNamesMap(subscriberIds, now);
+        Map<String, List<String>> coursesByUser = buildSubscribedCourseNamesMap(subscriberIds, now);
 
         Page<MemberResponse> mapped = userPage.map(user ->
-                MemberResponse.fromUser(user, coursesByUser.getOrDefault(user.getId(), Collections.emptyList()))
+                MemberResponse.fromUser(user, coursesByUser.getOrDefault(user.getUserId(), Collections.emptyList()))
         );
         return PagedResponse.from(mapped);
     }
@@ -67,7 +68,7 @@ public class MemberServiceImplementation implements MemberService {
     @Transactional(readOnly = true)
     public PagedResponse<MemberResponse> listNonSubscribedMembers(String search, int page, int size) {
         LocalDateTime now = LocalDateTime.now();
-        List<Long> subscriberIds = subscriptionRepository.findActiveSubscriberUserIds(
+        List<String> subscriberIds = subscriptionRepository.findActiveSubscriberUserIds(
                 SubscriptionStatus.ACTIVE, now, null
         );
 
@@ -86,9 +87,9 @@ public class MemberServiceImplementation implements MemberService {
         return PagedResponse.from(mapped);
     }
 
-    private Map<Long, List<String>> buildSubscribedCourseNamesMap(List<Long> userIds, LocalDateTime now) {
-        Map<Long, String> courseNames = courseRepository.findAll().stream()
-                .collect(Collectors.toMap(Course::getId, Course::getTitle));
+    private Map<String, List<String>> buildSubscribedCourseNamesMap(List<String> userIds, LocalDateTime now) {
+        Map<String, String> courseNames = courseRepository.findAll().stream()
+                .collect(Collectors.toMap(Course::getCourseId, Course::getTitle));
 
         return userIds.stream()
                 .collect(Collectors.toMap(
@@ -98,7 +99,7 @@ public class MemberServiceImplementation implements MemberService {
                         ).stream()
                                 .map(CourseSubscription::getCourseId)
                                 .map(courseNames::get)
-                                .filter(name -> name != null)
+                                .filter(Objects::nonNull)
                                 .toList()
                 ));
     }

@@ -20,6 +20,10 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Public business course id (e.g. CRS000001). Not the table primary key. */
+    @Column(name = "course_id", unique = true, length = 20)
+    private String courseId;
+
     @Column(nullable = false, length = 200)
     private String title;
 

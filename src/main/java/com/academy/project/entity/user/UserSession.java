@@ -22,8 +22,8 @@ public class UserSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "user_id", nullable = false, length = 20)
+    private String userId;
 
     @Column(name = "refresh_token_hash", nullable = false, unique = true, length = 255)
     private String refreshTokenHash;

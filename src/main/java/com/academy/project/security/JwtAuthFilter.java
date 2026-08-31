@@ -36,12 +36,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtTokenProvider.parseClaims(token);
 
-                Long userId = Long.valueOf(claims.getSubject());
+                String userId = claims.getSubject();
                 String role = claims.get("role", String.class);
 
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
-                // Lightweight principal built straight from JWT claims - no DB hit on every request.
                 var authToken = new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

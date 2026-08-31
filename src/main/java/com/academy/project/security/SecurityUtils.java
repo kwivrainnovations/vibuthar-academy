@@ -8,26 +8,20 @@ public final class SecurityUtils {
     }
 
     /**
-     * JwtAuthFilter stores the JWT subject as a Long user id; form login uses UserPrincipal.
+     * JwtAuthFilter stores the public user id (e.g. STU000001) as the JWT subject;
+     * form login uses UserPrincipal.
      */
-    public static Long resolveUserId(Authentication authentication) {
+    public static String resolveUserId(Authentication authentication) {
         if (authentication == null) {
             return null;
         }
 
         Object principal = authentication.getPrincipal();
         if (principal instanceof UserPrincipal userPrincipal) {
-            return userPrincipal.getId();
+            return userPrincipal.getUserId();
         }
-        if (principal instanceof Long userId) {
-            return userId;
-        }
-        if (principal instanceof String subject) {
-            try {
-                return Long.parseLong(subject);
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
+        if (principal instanceof String userId) {
+            return userId.isBlank() ? null : userId;
         }
         return null;
     }

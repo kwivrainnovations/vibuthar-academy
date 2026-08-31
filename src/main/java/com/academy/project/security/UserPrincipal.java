@@ -15,6 +15,7 @@ import java.util.List;
 public class UserPrincipal implements UserDetails {
 
     private final Long id;
+    private final String userId;
     private final String email;
     private final String phone;
     private final String passwordHash;
@@ -23,6 +24,7 @@ public class UserPrincipal implements UserDetails {
 
     public UserPrincipal(User user) {
         this.id = user.getId();
+        this.userId = user.getUserId();
         this.email = user.getEmail();
         this.phone = user.getPhone();
         this.passwordHash = user.getPasswordHash();
@@ -32,6 +34,10 @@ public class UserPrincipal implements UserDetails {
 
     public Long getId() {
         return id;
+    }
+
+    public String getUserId() {
+        return userId;
     }
 
     public String getPhone() {

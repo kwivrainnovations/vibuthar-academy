@@ -20,10 +20,10 @@ public class CourseSubscription {
     private Long id;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
     @Column(name = "course_id", nullable = false)
-    private Long courseId;
+    private String courseId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

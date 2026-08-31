@@ -3,30 +3,40 @@ package com.academy.project.dto.response;
 import com.academy.project.entity.user.User;
 import com.academy.project.entity.user.UserRole;
 import com.academy.project.entity.user.UserStatus;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Collections;
+import java.util.List;
+
 @Getter
-@AllArgsConstructor
 @Builder
 public class UserResponse {
 
     private Long id;
+    private String userId;
     private String name;
     private String email;
     private String phone;
     private UserRole role;
     private UserStatus status;
+    @Builder.Default
+    private List<SubscribedCourseResponse> subscribedCourses = Collections.emptyList();
 
     public static UserResponse fromEntity(User user) {
-        return new UserResponse(
-                user.getId(),
-                user.getName(),
-                user.getEmail(),
-                user.getPhone(),
-                user.getRole(),
-                user.getStatus()
-        );
+        return fromEntity(user, Collections.emptyList());
+    }
+
+    public static UserResponse fromEntity(User user, List<SubscribedCourseResponse> subscribedCourses) {
+        return UserResponse.builder()
+                .id(user.getId())
+                .userId(user.getUserId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .role(user.getRole())
+                .status(user.getStatus())
+                .subscribedCourses(subscribedCourses != null ? subscribedCourses : Collections.emptyList())
+                .build();
     }
 }

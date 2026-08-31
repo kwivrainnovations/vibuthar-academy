@@ -22,6 +22,10 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** Public business user id (e.g. STU000003). Not the table primary key. */
+    @Column(name = "user_id", unique = true, length = 20)
+    private String userId;
+
     @Column(nullable = false, length = 150)
     private String name;
 

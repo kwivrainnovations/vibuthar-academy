@@ -18,13 +18,13 @@ public interface CourseSubscriptionRepository extends JpaRepository<CourseSubscr
               AND (cs.expiresAt IS NULL OR cs.expiresAt > :now)
             """)
     List<CourseSubscription> findActiveSubscriptionsForUser(
-            @Param("userId") Long userId,
+            @Param("userId") String userId,
             @Param("status") SubscriptionStatus status,
             @Param("now") LocalDateTime now
     );
 
     boolean existsByUserIdAndCourseIdAndStatusAndExpiresAtIsNullOrExpiresAtAfter(
-            Long userId, Long courseId, SubscriptionStatus status, LocalDateTime now
+            String userId, String courseId, SubscriptionStatus status, LocalDateTime now
     );
 
     @Query("""
@@ -33,9 +33,9 @@ public interface CourseSubscriptionRepository extends JpaRepository<CourseSubscr
               AND (cs.expiresAt IS NULL OR cs.expiresAt > :now)
               AND (:courseId IS NULL OR cs.courseId = :courseId)
             """)
-    List<Long> findActiveSubscriberUserIds(
+    List<String> findActiveSubscriberUserIds(
             @Param("status") SubscriptionStatus status,
             @Param("now") LocalDateTime now,
-            @Param("courseId") Long courseId
+            @Param("courseId") String courseId
     );
 }

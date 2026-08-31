@@ -18,6 +18,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByPhone(String phone);
 
+    Optional<User> findByUserId(String userId);
+
     boolean existsByEmailIgnoreCase(String email);
 
     boolean existsByPhone(String phone);
@@ -67,7 +69,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT u FROM User u
             WHERE u.role = :role
               AND u.deletedAt IS NULL
-              AND u.id IN :userIds
+              AND u.userId IN :userIds
               AND (:search IS NULL OR :search = ''
                    OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%'))
                    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
@@ -75,7 +77,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """)
     Page<User> findMembersByIds(
             @Param("role") UserRole role,
-            @Param("userIds") List<Long> userIds,
+            @Param("userIds") List<String> userIds,
             @Param("search") String search,
             Pageable pageable
     );
@@ -84,7 +86,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             SELECT u FROM User u
             WHERE u.role = :role
               AND u.deletedAt IS NULL
-              AND u.id NOT IN :excludedUserIds
+              AND u.userId NOT IN :excludedUserIds
               AND (:search IS NULL OR :search = ''
                    OR LOWER(u.name) LIKE LOWER(CONCAT('%', :search, '%'))
                    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%'))
@@ -92,7 +94,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
             """)
     Page<User> findMembersExcludingIds(
             @Param("role") UserRole role,
-            @Param("excludedUserIds") List<Long> excludedUserIds,
+            @Param("excludedUserIds") List<String> excludedUserIds,
             @Param("search") String search,
             Pageable pageable
     );

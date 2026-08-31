@@ -38,7 +38,7 @@ public class AdminMemberController {
     @GetMapping("/members/subscribed")
     @PreAuthorize("hasAnyRole('ADMIN','TRAINER')")
     public ResponseEntity<ApiResponse<PagedResponse<MemberResponse>>> listSubscribedMembers(
-            @RequestParam(required = false) Long courseId,
+            @RequestParam(required = false) String courseId,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
