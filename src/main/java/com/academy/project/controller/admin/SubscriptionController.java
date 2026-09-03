@@ -2,6 +2,7 @@ package com.academy.project.controller.admin;
 
 import com.academy.project.dto.subscription.CreateSubscriptionRequest;
 import com.academy.project.dto.subscription.SubscriptionResponse;
+import com.academy.project.dto.subscription.UpdateSubscriptionPaymentRequest;
 import com.academy.project.dto.response.ApiResponse;
 import com.academy.project.service.subscription.SubscriptionService;
 import jakarta.validation.Valid;
@@ -26,5 +27,14 @@ public class SubscriptionController {
         SubscriptionResponse response = subscriptionService.createSubscription(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Subscription created successfully", response));
+    }
+
+    @PatchMapping("/{subscriptionId}/payment")
+    @PreAuthorize("hasAnyRole('ADMIN','TRAINER')")
+    public ResponseEntity<ApiResponse<SubscriptionResponse>> updateSubscriptionPayment(
+            @PathVariable Long subscriptionId,
+            @Valid @RequestBody UpdateSubscriptionPaymentRequest request) {
+        SubscriptionResponse response = subscriptionService.updateSubscriptionPayment(subscriptionId, request);
+        return ResponseEntity.ok(ApiResponse.ok("Subscription payment updated successfully", response));
     }
 }

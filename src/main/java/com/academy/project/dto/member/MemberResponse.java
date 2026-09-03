@@ -5,6 +5,7 @@ import com.academy.project.entity.user.User;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.util.Collections;
 import java.util.List;
 
 @Getter
@@ -17,8 +18,16 @@ public class MemberResponse {
     private String email;
     private String phone;
     private List<String> subscribedCourses;
+    private List<MemberSubscriptionInfo> subscriptions;
 
     public static MemberResponse fromUser(User user, List<String> subscribedCourses) {
+        return fromUser(user, subscribedCourses, Collections.emptyList());
+    }
+
+    public static MemberResponse fromUser(
+            User user,
+            List<String> subscribedCourses,
+            List<MemberSubscriptionInfo> subscriptions) {
         return MemberResponse.builder()
                 .id(user.getId())
                 .userId(user.getUserId())
@@ -26,6 +35,7 @@ public class MemberResponse {
                 .email(user.getEmail())
                 .phone(user.getPhone())
                 .subscribedCourses(subscribedCourses)
+                .subscriptions(subscriptions)
                 .build();
     }
 

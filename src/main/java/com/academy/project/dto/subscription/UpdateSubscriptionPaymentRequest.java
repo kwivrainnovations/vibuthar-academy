@@ -4,33 +4,19 @@ import com.academy.project.enums.PaymentStatus;
 import com.academy.project.enums.PaymentType;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
-public class CreateSubscriptionRequest {
+public class UpdateSubscriptionPaymentRequest {
 
-    @NotBlank(message = "Student id is required")
-    private String studentId;
-
-    @NotBlank(message = "Course id is required")
-    private String courseId;
-
-    /** Optional. Leave null for no expiry. */
-    private LocalDateTime expiresAt;
-
-    /** Optional. Defaults to null when omitted. */
     private PaymentType paymentType;
 
-    /** Optional. Defaults to NOT_PAID when omitted; derived from amount when amount is sent. */
     private PaymentStatus paymentStatus;
 
-    /** Optional paid amount. Defaults to 0. Cannot exceed course price. */
     @DecimalMin(value = "0.00", message = "Amount cannot be negative")
     @Digits(integer = 8, fraction = 2, message = "Amount must have at most 2 decimal places")
     private BigDecimal amount;
