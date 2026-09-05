@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -87,13 +88,13 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password"
                         ).authenticated()
-                        .requestMatchers("/api/courses").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/courses", "/api/admin/courses").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/images", "/api/images/**").permitAll()
                         .requestMatchers("/api/v1/interests").permitAll()
+                        .requestMatchers("/images/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
                         // Coarse path gates. Fine-grained roles live on methods via @PreAuthorize.
-                        // /api/admin/** stays authenticated-only so multi-role admin APIs
-                        // (e.g. GET /api/admin/courses for ADMIN|TRAINER|STUDENT) are not blocked here.
                         .requestMatchers("/api/admin/**").authenticated()
                         .requestMatchers("/api/trainer/**").hasAnyRole("ADMIN", "TRAINER")
                         .requestMatchers("/api/student/**").hasAnyRole("ADMIN", "TRAINER", "STUDENT")
