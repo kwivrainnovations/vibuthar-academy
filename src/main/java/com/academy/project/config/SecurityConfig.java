@@ -91,9 +91,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/interests").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
 
-                        // Role-gated examples (Phase 1 demo endpoints; real feature endpoints
-                        // will apply the same @PreAuthorize / matcher pattern per role.)
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // Coarse path gates. Fine-grained roles live on methods via @PreAuthorize.
+                        // /api/admin/** stays authenticated-only so multi-role admin APIs
+                        // (e.g. GET /api/admin/courses for ADMIN|TRAINER|STUDENT) are not blocked here.
+                        .requestMatchers("/api/admin/**").authenticated()
                         .requestMatchers("/api/trainer/**").hasAnyRole("ADMIN", "TRAINER")
                         .requestMatchers("/api/student/**").hasAnyRole("ADMIN", "TRAINER", "STUDENT")
 
