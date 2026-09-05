@@ -56,7 +56,7 @@ public class CourseController {
     @PostMapping("/admin/courses/{courseId}/videos")
     @PreAuthorize("hasAnyRole('ADMIN','TRAINER')")
     public ResponseEntity<ApiResponse<CourseVideoResponse>> addVideoToCourse(
-            @PathVariable Long courseId,
+            @PathVariable String courseId,
             @Valid @RequestBody AddCourseVideoRequest request) {
         CourseVideoResponse response = courseService.addVideoToCourse(courseId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
