@@ -44,7 +44,6 @@ public class CourseController {
     }
 
     @GetMapping("/admin/courses")
-    @PreAuthorize("hasAnyRole('ADMIN','TRAINER')")
     public ResponseEntity<ApiResponse<PagedResponse<CourseResponse>>> listAdminCourses(
             @RequestParam(required = false) CourseStatus status,
             @RequestParam(required = false) String search,
