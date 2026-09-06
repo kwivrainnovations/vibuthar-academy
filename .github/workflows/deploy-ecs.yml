@@ -17,8 +17,6 @@
 name: Deploy to ECS
 
 on:
-  push:
-    branches: [main, deployment]
   workflow_dispatch:
     inputs:
       branch:
@@ -26,6 +24,10 @@ on:
         required: true
         type: string
         default: deployment
+  push:
+    branches:
+      - main
+      - deployment
 
 concurrency:
   group: deploy-ecs-ap-south-1
