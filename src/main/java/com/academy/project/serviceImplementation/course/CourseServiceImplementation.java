@@ -31,9 +31,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -99,7 +103,21 @@ public class CourseServiceImplementation implements CourseService {
             coursePage = courseRepository.findAll(pageRequest);
         }
 
-        Page<CourseResponse> mapped = coursePage.map(CourseResponse::fromEntity);
+        List<Long> coursePks = coursePage.getContent().stream()
+                .map(Course::getId)
+                .toList();
+
+        Map<Long, List<CourseVideo>> videosByCoursePk = coursePks.isEmpty()
+                ? Collections.emptyMap()
+                : courseVideoRepository.findByCourseIdInOrderBySortOrderAsc(coursePks).stream()
+                .collect(Collectors.groupingBy(CourseVideo::getCourseId));
+
+        Page<CourseResponse> mapped = coursePage.map(course ->
+                CourseResponse.fromEntityWithVideos(
+                        course,
+                        videosByCoursePk.getOrDefault(course.getId(), Collections.emptyList())
+                )
+        );
         return PagedResponse.from(mapped);
     }
 
