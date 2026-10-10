@@ -1,10 +1,15 @@
 package com.academy.project.serviceImplementation.user;
 
 import com.academy.project.dto.response.UserResponse;
+import com.academy.project.dto.user.BulkCreateUserItem;
+import com.academy.project.dto.user.BulkUserParseResult;
+import com.academy.project.dto.user.BulkUserRowError;
+import com.academy.project.dto.user.BulkUserUploadResponse;
 import com.academy.project.dto.user.UpdateUserRequest;
 import com.academy.project.entity.test.TestAttempt;
 import com.academy.project.entity.user.User;
 import com.academy.project.entity.user.UserRole;
+import com.academy.project.entity.user.UserStatus;
 import com.academy.project.exception.ApiException;
 import com.academy.project.repository.payment.CoursePaymentRepository;
 import com.academy.project.repository.subscription.CourseSubscriptionRepository;
@@ -15,12 +20,18 @@ import com.academy.project.repository.user.UserSessionRepository;
 import com.academy.project.repository.video.VideoWatchProgressRepository;
 import com.academy.project.security.SecurityUtils;
 import com.academy.project.service.user.UserService;
+import com.academy.project.util.PhoneUtils;
+import com.academy.project.util.UserExcelHelper;
+import com.academy.project.util.UserIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,6 +46,7 @@ public class UserServiceImplementation implements UserService {
     private final VideoWatchProgressRepository videoWatchProgressRepository;
     private final TestAttemptRepository testAttemptRepository;
     private final AttemptAnswerRepository attemptAnswerRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional(readOnly = true)
@@ -73,6 +85,69 @@ public class UserServiceImplementation implements UserService {
         user.setAddress(trimToNull(request.getAddress()));
 
         return UserResponse.fromEntity(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadSampleUsersExcel() {
+        return UserExcelHelper.buildSampleWorkbook();
+    }
+
+    @Override
+    @Transactional
+    public BulkUserUploadResponse importUsersFromExcel(MultipartFile excelFile) {
+        BulkUserParseResult parsed = UserExcelHelper.parse(excelFile);
+
+        List<UserResponse> created = new ArrayList<>();
+        List<BulkUserRowError> errors = new ArrayList<>(parsed.getErrors());
+
+        for (BulkCreateUserItem item : parsed.getValidItems()) {
+            if (userRepository.existsByPhoneNormalized(item.getPhone())) {
+                errors.add(UserExcelHelper.rowError(
+                        item.getSourceRow(),
+                        "An account with this mobile number already exists",
+                        item.getName(),
+                        item.getPhone(),
+                        item.getPassword(),
+                        item.getRole() != null ? item.getRole().name() : "STUDENT"
+                ));
+                continue;
+            }
+
+            created.add(UserResponse.fromEntity(createUserFromBulkItem(item)));
+        }
+
+        errors.sort((a, b) -> Integer.compare(a.getRow(), b.getRow()));
+
+        return BulkUserUploadResponse.builder()
+                .totalRows(parsed.getTotalRows())
+                .createdCount(created.size())
+                .failedCount(errors.size())
+                .users(created)
+                .errors(errors)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadBulkUserErrorReport(List<BulkUserRowError> errors) {
+        return UserExcelHelper.buildErrorReportWorkbook(errors);
+    }
+
+    private User createUserFromBulkItem(BulkCreateUserItem item) {
+        UserRole role = item.getRole() != null ? item.getRole() : UserRole.STUDENT;
+
+        User user = User.builder()
+                .name(item.getName().trim())
+                .phone(PhoneUtils.normalize(item.getPhone()))
+                .passwordHash(passwordEncoder.encode(item.getPassword()))
+                .role(role)
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        user = userRepository.save(user);
+        user.setUserId(UserIdGenerator.generate(user));
+        return userRepository.save(user);
     }
 
     @Override

@@ -4,14 +4,22 @@ import com.academy.project.dto.intrest.InterestResponse;
 import com.academy.project.dto.member.MemberResponse;
 import com.academy.project.dto.response.ApiResponse;
 import com.academy.project.dto.response.PagedResponse;
+import com.academy.project.dto.user.BulkUserErrorReportRequest;
+import com.academy.project.dto.user.BulkUserUploadResponse;
 import com.academy.project.enums.EmailStatus;
 import com.academy.project.service.intrest.InterestService;
 import com.academy.project.service.member.MemberService;
 import com.academy.project.service.user.UserService;
+import com.academy.project.util.UserExcelHelper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -60,6 +68,54 @@ public class AdminMemberController {
                 search, page, size
         );
         return ResponseEntity.ok(ApiResponse.ok("Non-subscribed members fetched successfully", response));
+    }
+
+    /** Download empty/sample Excel template for bulk user upload. */
+    @GetMapping("/users/sample-excel")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> downloadSampleUsersExcel() {
+        byte[] file = userService.downloadSampleUsersExcel();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + UserExcelHelper.SAMPLE_FILENAME + "\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    /** Upload filled Excel to add users in bulk. Invalid rows are skipped; valid rows are created. */
+    @PostMapping(value = "/users/excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<BulkUserUploadResponse>> importUsersFromExcel(
+            @RequestParam("file") MultipartFile file) {
+        BulkUserUploadResponse response = userService.importUsersFromExcel(file);
+        String message;
+        if (response.getFailedCount() == 0) {
+            message = "Users imported from Excel successfully";
+        } else if (response.getCreatedCount() == 0) {
+            message = "No users imported. Fix the row errors and retry.";
+        } else {
+            message = "Bulk upload completed with some row errors";
+        }
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(message, response));
+    }
+
+    /**
+     * Download Excel of failed bulk-upload rows.
+     * Pass the {@code errors} array from the upload response body.
+     */
+    @PostMapping("/users/excel/error-report")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> downloadBulkUserErrorReport(
+            @Valid @RequestBody BulkUserErrorReportRequest request) {
+        byte[] file = userService.downloadBulkUserErrorReport(request.getErrors());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + UserExcelHelper.ERROR_REPORT_FILENAME + "\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
     }
 
     @DeleteMapping("/users/{userId}")
