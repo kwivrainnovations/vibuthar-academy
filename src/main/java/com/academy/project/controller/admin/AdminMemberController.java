@@ -51,7 +51,7 @@ public class AdminMemberController {
             @RequestParam(required = false) String courseId,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "500") int size) {
         PagedResponse<MemberResponse> response = memberService.listSubscribedMembers(
                 courseId, search, page, size
         );
@@ -63,7 +63,7 @@ public class AdminMemberController {
     public ResponseEntity<ApiResponse<PagedResponse<MemberResponse>>> listNonSubscribedMembers(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "500") int size) {
         PagedResponse<MemberResponse> response = memberService.listNonSubscribedMembers(
                 search, page, size
         );
